@@ -133,9 +133,14 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		//drawing document title
 		$y = $this->drawDocumentTitle($pdfPage, $pdfPage->getWidth()/2, $y+2*$this->_font['size_xxl'], self::TEXT_ALIGN_CENTER);
 
+		//drawing legal info
+		$pdfPage->setFont($this->_font['normal'],$this->_font['size_s']);
+		$y2 = $this->drawTextBox($this->_shoppingConfig['legal-info'], $pdfPage, $pdfPage->getWidth()/2, $padding, self::TEXT_ALIGN_CENTER, true);
+		$pdfPage->setFont($this->_font['normal'],$this->_font['size_m']);
+		
 		//drawing frame for document data
 		$pdfPage->setFillColor($this->_color['background']);
-		$pdfPage->drawRectangle($padding, $y, $pdfPage->getWidth()-$padding, $padding);
+		$pdfPage->drawRectangle($padding, $y, $pdfPage->getWidth()-$padding, isset($y2)?$y2:$padding);
 		$this->templateStartY = $y;
 		$pdfPage->setFillColor($this->_color['text']);
 
@@ -310,7 +315,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 
 			foreach ($cartContent as $key => $item) {
 				//checking if enough place on page left
-				if ($y<$lineHeight) {
+				if ($y<1.5*$lineHeight) {
 					$this->_pdf->pages[] = $page;
 					$page = clone $this->_pdf->pages['template'];
 					$page->setFont($this->_font['normal'], $this->_font['size_m']);
@@ -578,29 +583,61 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 	}
 
 	public static function getTextWidth($text, Zend_Pdf_Page $page, $fontSize = null, $encoding = null) {
-        if( $encoding == null ) $encoding = self::$encoding;
+        if ($encoding == null) $encoding = self::$encoding;
 
-        if( $page instanceof Zend_Pdf_Page ){
-            $font = $page->getFont();
-            $fontSize = $page->getFontSize();
-        }elseif( $page instanceof Zend_Pdf_Resource_Font ){
+        if ($page instanceof Zend_Pdf_Page){
+            $font		= $page->getFont();
+            $fontSize	= $page->getFontSize();
+        } elseif ($page instanceof Zend_Pdf_Resource_Font){
             $font = $page;
             if( $fontSize === null ) throw new Exception('The fontsize is unknown');
         }
 
-        if( !$font instanceof Zend_Pdf_Resource_Font ){
-            throw new Exception('Invalid resource passed');
+        if(!$font instanceof Zend_Pdf_Resource_Font){
+			throw new Exception('Invalid resource passed');
         }
-
-        $drawingText = iconv ( '', $encoding, $text );
-        $characters = array ();
-        for($i = 0; $i < strlen ( $drawingText ); $i ++) {
-            $characters [] = ord ( $drawingText [$i] );
+		
+        $drawingText = iconv($encoding, $encoding.'//TRANSLIT//IGNORE', $text);
+        $characters = array();
+        for($i=0; $i < strlen($drawingText); $i++) {
+            $characters[] =  ord($drawingText[$i]);
         }
-        $glyphs = $font->glyphNumbersForCharacters ( $characters );
-        $widths = $font->widthsForGlyphs ( $glyphs );
-        $textWidth = (array_sum ( $widths ) / $font->getUnitsPerEm ()) * $fontSize;
+        $glyphs = $font->glyphNumbersForCharacters($characters);
+        $widths = $font->widthsForGlyphs($glyphs);
+        $textWidth = (array_sum($widths) / $font->getUnitsPerEm()) * $fontSize;
         return $textWidth;
     }
+
+	public static function drawTextBox($text, Zend_Pdf_Page $page, $x, $y, $align = self::TEXT_ALIGN_LEFT, $reversed = false) {
+		$lineHeight = 1.2 * $page->getFontSize();
+		$lines = explode(PHP_EOL, $text);
+
+		switch ($align) {
+			case  self::TEXT_ALIGN_CENTER;
+				$pos = 0.5;
+			break;
+			case  self::TEXT_ALIGN_RIGHT;
+				$pos = 1;
+			break;
+			case self::TEXT_ALIGN_LEFT:
+			default:
+				$pos = 0;
+			break;
+		}
+
+		if ($reversed) {
+			$lines = array_reverse($lines);
+			$sign = 1;
+		} else {
+			$sign = -1;
+		}
+		foreach ($lines as $line){
+			$width = self::getTextWidth($line, $page);
+			$page->drawText($line, $x-($pos*$width), $y, self::$encoding);
+			$y += $sign*$lineHeight;
+		}
+
+		return $y;
+	}
 
 }
