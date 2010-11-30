@@ -134,14 +134,17 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		$y = $this->drawDocumentTitle($pdfPage, $pdfPage->getWidth()/2, $y+2*$this->_font['size_xxl'], self::TEXT_ALIGN_CENTER);
 
 		//drawing legal info
-		$pdfPage->setFont($this->_font['normal'],$this->_font['size_s']);
-		$y2 = $this->drawTextBox($this->_shoppingConfig['legal-info'], $pdfPage, $pdfPage->getWidth()/2, $padding, self::TEXT_ALIGN_CENTER, true);
-		$pdfPage->setFont($this->_font['normal'],$this->_font['size_m']);
-		
+		if (isset($this->_shoppingConfig['legal-info']) && !empty ($this->_shoppingConfig['legal-info'])){
+			$pdfPage->setFont($this->_font['normal'],$this->_font['size_s']);
+			$yLegacyTop = $this->drawTextBox($this->_shoppingConfig['legal-info'], $pdfPage, $pdfPage->getWidth()/2, $padding, self::TEXT_ALIGN_CENTER, true);
+			$pdfPage->setFont($this->_font['normal'],$this->_font['size_m']);
+		}
 		//drawing frame for document data
 		$pdfPage->setFillColor($this->_color['background']);
-		$pdfPage->drawRectangle($padding, $y, $pdfPage->getWidth()-$padding, isset($y2)?$y2:$padding);
-		$this->templateStartY = $y;
+		$this->templateStartY	= $y;
+		$this->templateEndY		= isset($yLegacyTop)?$yLegacyTop:$padding;
+		$pdfPage->drawRectangle($padding, $this->templateStartY, $pdfPage->getWidth()-$padding, $this->templateEndY);
+		
 		$pdfPage->setFillColor($this->_color['text']);
 
 		$this->_pdf->pages['template'] = clone $pdfPage;
@@ -212,34 +215,39 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		
 		$lineHeight = $lineHeight * $page->getFontSize();
 
-		if (isset($address['firstname'])) {
+		if (isset($address['firstname']) && !empty ($address['firstname'])) {
 			$text = $address['firstname'] . ($address['lastname']?' '.$address['lastname']:'');
 			$page->drawText($text, $x, $y, self::$encoding);
 			$y -= $lineHeight;
 		}
-		if (isset($address['company'])) {
+		if (isset($address['company']) && !empty ($address['company'])) {
 			$page->drawText($address['company'], $x, $y, self::$encoding);
 			$y -= $lineHeight;
 		}
-		if (isset($address['address1'])) {
-			$text = $address['address1'].($address['address2']?', '.$address['address2']:'');
+		if (isset($address['address1']) && !empty ($address['address1'])) {
+			$text = $address['address1'];
 			$page->drawText($text, $x, $y, self::$encoding);
 			$y -= $lineHeight;
 		}
-		if (isset($address['city'])) {
+		if (isset($address['address2']) && !empty ($address['address2'])) {
+			$text = $address['address2'];
+			$page->drawText($text, $x, $y, self::$encoding);
+			$y -= $lineHeight;
+		}
+		if (isset($address['city']) && !empty ($address['city'])) {
 			$text = $address['city'].($address['state']?', '.$address['state']:'').($address['zip']?', '.$address['zip']:'');
 			$page->drawText($text, $x, $y, self::$encoding);
 			$y -= $lineHeight;
 		}
-		if (isset($address['country'])) {
+		if (isset($address['country']) && !empty ($address['country'])) {
 			$page->drawText(RCMS_Object_QuickConfig_QuickConfig::$worldCountries[$address['country']], $x, $y, self::$encoding);
 			$y -= $lineHeight;
 		}
-		if (isset($address['phone'])) {
+		if (isset($address['phone']) && !empty ($address['phone'])) {
 			$page->drawText('Phone: '.$address['phone'], $x, $y, self::$encoding);
 			$y -= $lineHeight;
 		}
-		if (isset($address['email'])) {
+		if (isset($address['email']) && !empty ($address['email'])) {
 			$page->drawText($address['email'], $x, $y, self::$encoding);
 			$y -= $lineHeight;
 		}
@@ -315,7 +323,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 
 			foreach ($cartContent as $key => $item) {
 				//checking if enough place on page left
-				if ($y<1.5*$lineHeight) {
+				if ( ($y-$this->templateEndY) < $lineHeight) {
 					$this->_pdf->pages[] = $page;
 					$page = clone $this->_pdf->pages['template'];
 					$page->setFont($this->_font['normal'], $this->_font['size_m']);
@@ -478,8 +486,11 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 			if (!$withTax && isset ($values['tax'])){
 				$label = 'Tax:';
 				$page->drawText($label, $x, $y, self::$encoding);
+				$xLabelEnd = $x+10+self::getTextWidth($label, $page);
 				$price = $values['tax']>0?$values['tax']:'0.00';
 				$price = number_format($price,2,'.','').' '.$this->_shoppingConfig['currency'];
+				$xText = $x1-self::getTextWidth($price, $page);
+				$y -= $xText<$xLabelEnd? $lineHeight: 0;
 				$page->drawText($price, $x1-self::getTextWidth($price, $page), $y, self::$encoding);
 				$y -= $lineHeight;
 			}
@@ -491,9 +502,9 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 				$price = $values['total'];
 				$price = number_format($price,2,'.','').' '.$this->_shoppingConfig['currency'];
 				$page->setFont($this->_font['bold'], $this->_font['size_l']);
-				$xPrice = $x1-self::getTextWidth($price, $page);
-				$y -= $xPrice<$xLabelEnd? $lineHeight: 0;
-				$page->drawText($price, $xPrice, $y, self::$encoding);
+				$xText = $x1-self::getTextWidth($price, $page);
+				$y -= $xText<$xLabelEnd? $lineHeight: 0;
+				$page->drawText($price, $xText, $y, self::$encoding);
 				$y -= $lineHeight;
 				$page->setFillColor($this->_color['text']);
 			}
@@ -520,8 +531,11 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 			if (isset ($values['shipping_type'])){
 				$page->setFont($this->_font['normal'],$this->_font['size_m']);
 				$label = 'Shipping type:';
+				$xLabelEnd = $x+5+self::getTextWidth($label, $page);
 				$page->drawText($label, $x, $y, self::$encoding);
 				$text = $values['shipping_type'];
+				$xText = $x1-self::getTextWidth($text, $page);
+				$y -= $xText<$xLabelEnd? $lineHeight: 0;
 				$page->drawText($text, $x1-self::getTextWidth($text, $page), $y, self::$encoding);
 				$y -= $lineHeight;
 			}
@@ -530,7 +544,10 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 				$page->setFont($this->_font['normal'],$this->_font['size_m']);
 				$label = 'Payment method:';
 				$page->drawText($label, $x, $y, self::$encoding);
+				$xLabelEnd = $x+5+self::getTextWidth($label, $page);
 				$text = $values['payment_method'];
+				$xText = $x1-self::getTextWidth($text, $page);
+				$y -= $xText<$xLabelEnd? $lineHeight: 0;
 				$page->drawText($text, $x1-self::getTextWidth($text, $page), $y, self::$encoding);
 				$y -= $lineHeight;
 			}
