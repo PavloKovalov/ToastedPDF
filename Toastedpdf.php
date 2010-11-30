@@ -170,12 +170,6 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		$pdfPage->drawLine(8*$gridStep, $y, $pdfPage->getWidth()-1.5*$padding, $y);
 		$y -= 0.8*$padding;
 		//drawing order summary
-		$values = array (
-			'sub-total' => '500',
-			'tax' => '20.5',
-			'shipping' => '0',
-			'total' => (500+20.5-47.99)
-		);
 		$y1 = $this->drawSummary($this->_summary, $pdfPage, 8*$gridStep, $y, $pdfPage->getWidth()-1.8*$padding,$this->_shoppingConfig['show-price-ati']==1?true:false);
 		
 		//drawing order details
@@ -195,7 +189,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		$y = $this->drawAddressBox($this->_shippingAddress, $pdfPage, $gridStep, $y);
 		$y = $y>$y1?$y1:$y;
 		//drawing cart content
-		$this->drawCartContent($this->_cart, $pdfPage, 2*$padding, $y, null, $this->_shoppingConfig['show-price-ati']==1?true:false, $this->_taxes['taxPerProduct']);
+		$this->drawCartContent($this->_cart, $pdfPage, 2*$padding, $y, null, $this->_shoppingConfig['show-price-ati']==1?true:false, $this->_taxes);
 
 		unset($this->_pdf->pages['template']);
 		if (empty($this->_pdf->pages)) {
@@ -397,7 +391,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 				
 				//$page->drawText($item['note'], $x+$colsWidth*3, $y, self::$encoding);
 
-				$price = $item['price']+($pricesIncTax&&isset($taxes[$item['id']])?$taxes[$item['id']]:0);
+				$price = $item['price']!='0' ? $item['price']+($pricesIncTax&&isset($taxes[$item['id']])?$taxes[$item['id']]:0) : '0';
 				$text = $price>0?number_format($price,2,'.',''):'FREE';
 				$x1 = $x+$colsWidth*4.5-self::getTextWidth($text, $page)/2;
 				$page->drawText($text, $x1, $y, self::$encoding);
