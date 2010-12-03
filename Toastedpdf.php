@@ -161,16 +161,17 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 
 		//drawing sub-header
 		$pdfPage->setFillColor($this->_color['title']);
-		$pdfPage->drawText('Details', 4*$gridStep, $y, self::$encoding);
-		$text = 'Order Summary';
-		$pdfPage->drawText($text, 9*$gridStep, $y, self::$encoding);
+		$text = 'Details';
+		$pdfPage->drawText($text, 6*$gridStep-self::getTextWidth($text, $pdfPage)/2, $y, self::$encoding);
+//		$text = 'Order Summary';
+//		$pdfPage->drawText($text, 9*$gridStep, $y, self::$encoding);
 		$y -= 0.2*$padding;
-		$pdfPage->setLineColor($this->_color['title']);
-		$pdfPage->drawLine(1.5*$padding, $y, 8*$gridStep-$padding, $y);
-		$pdfPage->drawLine(8*$gridStep, $y, $pdfPage->getWidth()-1.5*$padding, $y);
+//		$pdfPage->setLineColor($this->_color['title']);
+		$pdfPage->drawLine(1.5*$padding, $y, $pdfPage->getWidth()-1.5*$padding, $y);
+//		$pdfPage->drawLine(8*$gridStep, $y, $pdfPage->getWidth()-1.5*$padding, $y);
 		$y -= 0.8*$padding;
 		//drawing order summary
-		$y1 = $this->drawSummary($this->_summary, $pdfPage, 8*$gridStep, $y, $pdfPage->getWidth()-1.8*$padding,$this->_shoppingConfig['show-price-ati']==1?true:false);
+		//$y1 = $this->drawSummary($this->_summary, $pdfPage, 8*$gridStep, $y, $pdfPage->getWidth()-1.8*$padding,$this->_shoppingConfig['show-price-ati']==1?true:false);
 		
 		//drawing order details
 		
@@ -181,16 +182,16 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 //
 //		$y -= 1.2*$pdfPage->getFontSize();
 		$pdfPage->setFont($this->_font['bold'], $this->_font['size_s']);
-		$pdfPage->drawText('Shipped to:', $gridStep, $y, self::$encoding);
-		$pdfPage->drawText('Billing address:', 4.5*$gridStep, $y, self::$encoding);
+		$pdfPage->drawText('Shipped to:', 2*$gridStep, $y, self::$encoding);
+		$pdfPage->drawText('Billing address:', 7*$gridStep, $y, self::$encoding);
 		$pdfPage->setFont($this->_font['normal'], $this->_font['size_m']);
 		$y -= 1.6*$pdfPage->getFontSize();
-		$this->drawAddressBox($this->_billingAddress, $pdfPage, 4.5*$gridStep, $y);
-		$y = $this->drawAddressBox($this->_shippingAddress, $pdfPage, $gridStep, $y);
-		$y = $y>$y1?$y1:$y;
+		$y1 = $this->drawAddressBox($this->_billingAddress, $pdfPage, 7*$gridStep, $y);
+		$y  = $this->drawAddressBox($this->_shippingAddress, $pdfPage, 2*$gridStep, $y);
+		$y  = $y>$y1?$y1:$y;
 		//drawing cart content
 		$this->drawCartContent($this->_cart, $pdfPage, 2*$padding, $y, null, $this->_shoppingConfig['show-price-ati']==1?true:false, $this->_taxes);
-
+		
 		unset($this->_pdf->pages['template']);
 		if (empty($this->_pdf->pages)) {
 			$this->_pdf->pages[] = $pdfPage;
@@ -411,6 +412,8 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 //			$y -= $lineHeight;
 			if (isset($newPage) && ($newPage === true)) $this->_pdf->pages[] = $page;
 		}
+		$this->drawSummary($this->_summary, $page, $page->getWidth()/1.75, $y, $page->getWidth()-40,$this->_shoppingConfig['show-price-ati']==1?true:false);
+		return $y;
 	}
 	private function drawCartHeader(Zend_Pdf_Page $page, $x, $y, $colWidth, $withTax = null) {
 		$lineHeight = 2*$page->getFontSize();
