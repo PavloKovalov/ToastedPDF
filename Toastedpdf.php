@@ -21,6 +21,8 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 	private $_template			= null;
 	private $_pdf				= null;
 
+	private $translator			= null;
+
 	public function __construct() {
 		$this->_model = new ToastedpdfModel();
 		$this->_sitePath = unserialize(Zend_Registry::get('config'))->website->website->path;
@@ -46,6 +48,9 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		$this->_color['title']			= Zend_Pdf_Color_Html::color('#006699');
 
 		$this->encoding	= 'UTF-8';
+//		if (!Zend_Registry::isRegistered('Zend_Translator')) {
+//			$this->translator = new Zend_Translate();
+//		}
 	}
 
 	public function run($requestParams = array()) {
@@ -144,7 +149,9 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		$this->templateStartY	= $y;
 		$this->templateEndY		= isset($yLegacyTop)?$yLegacyTop:$padding;
 		$pdfPage->drawRectangle($padding, $this->templateStartY, $pdfPage->getWidth()-$padding, $this->templateEndY);
-		
+		$this->templateEndY += 10*$this->_font['size_m'];
+		$this->drawSummary($this->_summary, $pdfPage, $pdfPage->getWidth()/2, $this->templateEndY, $pdfPage->getWidth()-40,$this->_shoppingConfig['show-price-ati']==1?true:false);
+
 		$pdfPage->setFillColor($this->_color['text']);
 
 		$this->_pdf->pages['template'] = clone $pdfPage;
@@ -412,7 +419,6 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 //			$y -= $lineHeight;
 			if (isset($newPage) && ($newPage === true)) $this->_pdf->pages[] = $page;
 		}
-		$this->drawSummary($this->_summary, $page, $page->getWidth()/1.75, $y, $page->getWidth()-40,$this->_shoppingConfig['show-price-ati']==1?true:false);
 		return $y;
 	}
 	private function drawCartHeader(Zend_Pdf_Page $page, $x, $y, $colWidth, $withTax = null) {
