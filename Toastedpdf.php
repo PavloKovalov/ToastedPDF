@@ -371,6 +371,9 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 				//item id
 				$page->setFont($page->getFont(), $this->_font['size_s']);
 				$text = $item['itemId'];
+				while (self::getTextWidth($text, $page) > 0.75*$colsWidth) {
+					$page->setFont($page->getFont(), $page->getFontSize()-1);
+				}
 				$page->drawText($text, 1.25*$colsWidth, $y, self::$encoding);
 
 				$page->setFont($page->getFont(), $this->_font['size_m']);
