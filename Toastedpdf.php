@@ -21,7 +21,8 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 	private $_template			= null;
 	private $_pdf				= null;
 
-	private $translator			= null;
+	private $_translator		= null;
+	private $_settings			= null;
 
 	public function __construct() {
 		$this->_model = new ToastedpdfModel();
@@ -48,9 +49,20 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		$this->_color['title']			= Zend_Pdf_Color_Html::color('#006699');
 
 		$this->encoding	= 'UTF-8';
-//		if (!Zend_Registry::isRegistered('Zend_Translator')) {
-//			$this->translator = new Zend_Translate();
-//		}
+		$this->_settings = new Zend_Config_Ini(I2PDFPLUGINPATH.'/system/settings.ini', 'config');
+		
+		try {
+			$this->_translator = new Zend_Translate(array(
+				'adapter'	=> 'csv',
+				'delimiter' => ',',
+				'content'	=> I2PDFPLUGINPATH.'/system/languages',
+				'scan'		=> Zend_Translate::LOCALE_FILENAME,
+				'locale'	=> $this->_settings ? $this->_settings->locale : 'en'
+			));
+			Zend_Registry::set('Zend_Translate', $this->_translator);
+		} catch (Exception $e) {
+			error_log($e->getMessage());
+		}
 	}
 
 	public function run($requestParams = array()) {
@@ -168,7 +180,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 
 		//drawing sub-header
 		$pdfPage->setFillColor($this->_color['title']);
-		$text = 'Details';
+		$text = $this->_translator->translate('Details');
 		$pdfPage->drawText($text, 6*$gridStep-self::getTextWidth($text, $pdfPage)/2, $y, self::$encoding);
 //		$text = 'Order Summary';
 //		$pdfPage->drawText($text, 9*$gridStep, $y, self::$encoding);
@@ -189,8 +201,8 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 //
 //		$y -= 1.2*$pdfPage->getFontSize();
 		$pdfPage->setFont($this->_font['bold'], $this->_font['size_s']);
-		$pdfPage->drawText('Shipped to:', 2*$gridStep, $y, self::$encoding);
-		$pdfPage->drawText('Billing address:', 7*$gridStep, $y, self::$encoding);
+		$pdfPage->drawText($this->_translator->translate('Shipped to').':', 2*$gridStep, $y, self::$encoding);
+		$pdfPage->drawText($this->_translator->translate('Billing address').':', 7*$gridStep, $y, self::$encoding);
 		$pdfPage->setFont($this->_font['normal'], $this->_font['size_m']);
 		$y -= 1.6*$pdfPage->getFontSize();
 		$y1 = $this->drawAddressBox($this->_billingAddress, $pdfPage, 7*$gridStep, $y);
@@ -206,7 +218,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		$pagesTotal = count($this->_pdf->pages);
 		$i = 1;
 		foreach ($this->_pdf->pages as $pg){
-			$text = 'Page '.$i++.' of '.$pagesTotal;
+			$text = $this->_translator->translate('Page').' '.$i++.' '.$this->_translator->translate('of').' '.$pagesTotal;
 			$pg->drawText($text, $pg->getWidth()-$padding-self::getTextWidth($text, $pg), $this->templateStartY+5);
 		}
 		$result = $this->_pdf->render();
@@ -246,7 +258,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 			$y -= $lineHeight;
 		}
 		if (isset($address['phone']) && !empty ($address['phone'])) {
-			$page->drawText('Phone: '.$address['phone'], $x, $y, self::$encoding);
+			$page->drawText($this->_translator->translate('Phone').': '.$address['phone'], $x, $y, self::$encoding);
 			$y -= $lineHeight;
 		}
 		if (isset($address['email']) && !empty ($address['email'])) {
@@ -294,7 +306,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 			$y -= $lineHeight;
 		}
 		if (!empty ($address['phone'])) {
-			$text = 'Phone: '.$address['phone'];
+			$text = $this->_translator->translate('Phone').': '.$address['phone'];
 			$page->setFillColor($this->_color['phone']);
 			$page->drawText($text, $x-$posMarker*self::getTextWidth($text, $page), $y, $this->encoding);
 			$y -= $lineHeight;
@@ -394,7 +406,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 					$y1 = $y - $page->getFontSize();
 					foreach ($item['options'] as $name=>$value){
 						$page->setFont($this->_font['normal'], $this->_font['size_s']);
-						$page->drawText(ucfirst($name).': '.ucfirst($value), $x+$colsWidth*2, $y1, self::$encoding);
+						$page->drawText(ucfirst($name).': '.ucfirst($value), $colsWidth*2, $y1, self::$encoding);
 						$y1 -= 1.2*$page->getFontSize();
 					}
 					$page->setFont($this->_font['normal'], $this->_font['size_m']);
@@ -403,7 +415,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 				//$page->drawText($item['note'], $x+$colsWidth*3, $y, self::$encoding);
 
 				$price = $item['price']!='0' ? $item['price']+($pricesIncTax&&isset($taxes[$item['id']])?$taxes[$item['id']]:0) : '0';
-				$text = $price>0?number_format($price,2,'.',''):'FREE';
+				$text = $price>0?number_format($price,2,'.',''):$this->_translator->translate('FREE');
 				$x1 = $x+$colsWidth*4.5-self::getTextWidth($text, $page)/2;
 				$page->drawText($text, $x1, $y, self::$encoding);
 
@@ -411,7 +423,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 				$x1 = $x+$colsWidth*5.25-self::getTextWidth($text, $page);
 				$page->drawText($text, $x1, $y, self::$encoding);
 
-				$text = $price>0?number_format(($item['count']*$price),2,'.',''):'FREE';
+				$text = $price>0?number_format(($item['count']*$price),2,'.',''):$this->_translator->translate('FREE');
 				$x1 = $x+$colsWidth*5.75-self::getTextWidth($text, $page)/2;
 				$page->drawText($text, $x1, $y, self::$encoding);
 				
@@ -428,27 +440,27 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		$lineHeight = 2*$page->getFontSize();
 		
 		$page->setFont($this->_font['normal'], $this->_font['size_s']-2);
-		$text = 'Photo';
+		$text = $this->_translator->translate('Photo');
 		$x1 = $x+0.25*$colWidth;//-self::getTextWidth($text, $page)/2;
 		$page->drawText($text, $x1, $y, self::$encoding);
 
-		$text = 'SKU';
+		$text = $this->_translator->translate('SKU');
 		$x1 = $x+$colWidth;
 		$page->drawText($text, $x1, $y, self::$encoding);
 
-		$text = 'Name';
+		$text = $this->_translator->translate('Name');
 		$x1 = $x+3*$colWidth;
 		$page->drawText($text, $x1, $y, self::$encoding);
 
-		$text = 'Price ('.$this->_shoppingConfig['currency'].')';
+		$text = $this->_translator->translate('Price').' ('.$this->_shoppingConfig['currency'].')';
 		$x1 = $x+4.5*$colWidth-self::getTextWidth($text, $page)/2;
 		$page->drawText($text, $x1, $y, self::$encoding);
 
-		$text = 'Qty';
+		$text = $this->_translator->translate('Qty');
 		$x1 = $x+5.2*$colWidth-self::getTextWidth($text, $page)/2;
 		$page->drawText($text, $x1, $y, self::$encoding);
 
-		$text = 'Total ('.$this->_shoppingConfig['currency'].')';
+		$text = $this->_translator->translate('Total').' ('.$this->_shoppingConfig['currency'].')';
 		$x1 = $x+5.75*$colWidth-self::getTextWidth($text, $page)/2;
 		$page->drawText($text, $x1, $y, self::$encoding);
 		$page->setLineColor($this->_color['highlightBg']);
@@ -464,7 +476,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		$x += 5;
 		if (is_array($values) && !empty ($values)) {
 			if (isset ($values['subtotal'])){
-				$label = $withTax?'Sub-total' : 'Total w/o tax:';
+				$label = ($withTax?$this->_translator->translate('Sub-total') : $this->_translator->translate('Total w/o tax')).':';
 				$page->drawText($label, $x, $y, self::$encoding);
 				$price = $withTax?$values['subtotal']+$values['tax']:$values['subtotal'];
 				$price = number_format($price,2,'.','').' '.$this->_shoppingConfig['currency'];
@@ -473,7 +485,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 			}
 
 			if (isset ($values['shipping'])){
-				$label = 'Shipping:';
+				$label = $this->_translator->translate('Shipping').':';
 				$page->drawText($label, $x, $y, self::$encoding);
 				$price = !empty ($values['shipping'])?number_format($values['shipping'],2,'.','').' '.$this->_shoppingConfig['currency']:'FREE';
 				$page->drawText($price, $x1-self::getTextWidth($price, $page), $y, self::$encoding);
@@ -481,7 +493,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 			}
 
 			if (isset ($values['discount']) && $values['discount']>0){
-				$label = 'Discount:';
+				$label = $this->_translator->translate('Discount').':';
 				$page->drawText($label, $x, $y, self::$encoding);
 				$price = $values['discount'];
 				$price = number_format($price,2,'.','').' '.$this->_shoppingConfig['currency'];
@@ -490,7 +502,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 			}
 			
 			if (!$withTax && isset ($values['tax'])){
-				$label = 'Tax:';
+				$label = $this->_translator->translate('Tax').':';
 				$page->drawText($label, $x, $y, self::$encoding);
 				$xLabelEnd = $x+10+self::getTextWidth($label, $page);
 				$price = $values['tax']>0?$values['tax']:'0.00';
@@ -502,7 +514,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 			}
 			if (isset ($values['total'])){
 				$page->setFillColor($this->_color['title']);
-				$label = $withTax?'Total:':'Total inc. tax:';
+				$label = ($withTax?$this->_translator->translate('Total'):$this->_translator->translate('Total inc. tax')).':';
 				$page->drawText($label, $x, $y, self::$encoding);
 				$xLabelEnd = $x+10+self::getTextWidth($label, $page);
 				$price = $values['total'];
@@ -516,7 +528,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 			}
 			if ($withTax && isset ($values['tax'])){
 				$page->setFont($this->_font['normal'],$this->_font['size_m']);
-				$label = 'Inc.Tax';
+				$label = $this->_translator->translate('Inc.Tax').':';
 				$page->drawText($label, $x, $y, self::$encoding);
 				$price = $values['tax']>0?$values['tax']:'0.00';
 				$price = number_format($price,2,'.','').' '.$this->_shoppingConfig['currency'];
@@ -525,7 +537,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 			}
 			if ($withTax){
 				$page->setFont($this->_font['normal'],$this->_font['size_m']);
-				$label = 'Total w/o Tax:';
+				$label = $this->_translator->translate('Total w/o Tax').':';
 				$page->drawText($label, $x, $y, self::$encoding);
 				$price = $values['total'] - $values['tax'];
 				$price = number_format($price,2,'.','').' '.$this->_shoppingConfig['currency'];
@@ -536,7 +548,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 
 			if (isset ($values['shipping_type'])){
 				$page->setFont($this->_font['normal'],$this->_font['size_m']);
-				$label = 'Shipping type:';
+				$label = $this->_translator->translate('Shipping type').':';
 				$xLabelEnd = $x+5+self::getTextWidth($label, $page);
 				$page->drawText($label, $x, $y, self::$encoding);
 				$text = $values['shipping_type'];
@@ -548,7 +560,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 
 			if (isset ($values['payment_method'])){
 				$page->setFont($this->_font['normal'],$this->_font['size_m']);
-				$label = 'Payment method:';
+				$label = $this->_translator->translate('Payment method').':';
 				$page->drawText($label, $x, $y, self::$encoding);
 				$xLabelEnd = $x+5+self::getTextWidth($label, $page);
 				$text = $values['payment_method'];
@@ -583,7 +595,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		if (!empty ($this->_summary['title'])){
 			$page->setFont($this->_font['bold'], $this->_font['size_title']);
 			$x1 = round($x-($posMarker*self::getTextWidth($this->_summary['title'], $page)));
-			$page->drawText(ucfirst($this->_summary['title']), $x1, $y, self::$encoding);
+			$page->drawText($this->_translator->translate(ucfirst($this->_summary['title'])), $x1, $y, self::$encoding);
 			$y -= $lineHeight * $page->getFontSize();
 		}
 		if (!empty ($this->_summary['id'])){
@@ -595,7 +607,8 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		}
 		if (!empty ($this->_summary['date'])){
 			$page->setFont($this->_font['bold'], $this->_font['size_xxl']);
-			$text = date('d M Y', $this->_summary['date']);
+			$text = new Zend_Date($this->_summary['date'], null, $this->_settings?$this->_settings->locale:'en'); //date('d M Y', $this->_summary['date']);
+			$text = $text->get(Zend_Locale_Format::getDateFormat($this->_settings?$this->_settings->locale:'en'));
 			$x1 = round($x-($posMarker*self::getTextWidth($text, $page)));
 			$page->drawText($text, $x1, $y, self::$encoding);
 			$y -= $lineHeight * $page->getFontSize();
