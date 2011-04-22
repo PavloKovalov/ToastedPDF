@@ -84,8 +84,6 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 			$pdf = $this->_generatePDF();
 			return $pdf;
 		}
-		//$id = $requestParams['id'];
-		//$this->generatePDF($id);
 	}
 
 	private function _generatePDF() {
@@ -415,7 +413,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 				//$page->drawText($item['note'], $x+$colsWidth*3, $y, self::$encoding);
 
 				$price = $item['price']!='0' ? $item['price']+($pricesIncTax&&isset($taxes[$item['id']])?$taxes[$item['id']]:0) : '0';
-				$text = $price>0?number_format($price,2,'.',''):$this->_translator->translate('FREE');
+				$text = $price!=0?number_format($price,2,'.',''):$this->_translator->translate('FREE');
 				$x1 = $x+$colsWidth*4.5-self::getTextWidth($text, $page)/2;
 				$page->drawText($text, $x1, $y, self::$encoding);
 
@@ -423,7 +421,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 				$x1 = $x+$colsWidth*5.25-self::getTextWidth($text, $page);
 				$page->drawText($text, $x1, $y, self::$encoding);
 
-				$text = $price>0?number_format(($item['count']*$price),2,'.',''):$this->_translator->translate('FREE');
+				$text = $price!=0?number_format(($item['count']*$price),2,'.',''):$this->_translator->translate('FREE');
 				$x1 = $x+$colsWidth*5.75-self::getTextWidth($text, $page)/2;
 				$page->drawText($text, $x1, $y, self::$encoding);
 				
