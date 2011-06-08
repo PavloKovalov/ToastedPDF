@@ -57,7 +57,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 				'delimiter' => ',',
 				'content'	=> I2PDFPLUGINPATH.'/system/languages',
 				'scan'		=> Zend_Translate::LOCALE_FILENAME,
-				'locale'	=> $this->_settings ? $this->_settings->locale : 'en'
+				'locale'	=> 'fr'//$this->_settings ? $this->_settings->locale : 'en'
 			));
 			Zend_Registry::set('Zend_Translate', $this->_translator);
 		} catch (Exception $e) {
@@ -160,7 +160,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		$this->templateEndY		= isset($yLegacyTop)?$yLegacyTop:$padding;
 		$pdfPage->drawRectangle($padding, $this->templateStartY, $pdfPage->getWidth()-$padding, $this->templateEndY);
 		$this->templateEndY += 10*$this->_font['size_m'];
-		$this->drawSummary($this->_summary, $pdfPage, $pdfPage->getWidth()/2, $this->templateEndY, $pdfPage->getWidth()-40,$this->_shoppingConfig['show-price-ati']==1?true:false);
+		$this->drawSummary($this->_summary, $pdfPage, $pdfPage->getWidth()/2, $this->templateEndY+($this->_shoppingConfig['show-price-ati']==1?$this->_font['size_m']:0), $pdfPage->getWidth()-40,$this->_shoppingConfig['show-price-ati']==1?true:false);
 
 		$pdfPage->setFillColor($this->_color['text']);
 
@@ -528,7 +528,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 				$page->setFont($this->_font['normal'],$this->_font['size_m']);
 				$label = $this->_translator->translate('Inc.Tax').':';
 				$page->drawText($label, $x, $y, self::$encoding);
-				$price = $values['tax']>0?$values['tax']:'0.00';
+				$price = $values['tax']>0?($withTax?$values['tax']-$values['discountTax']:$values['tax']):'0.00';
 				$price = number_format($price,2,'.','').' '.$this->_shoppingConfig['currency'];
 				$page->drawText($price, $x1-self::getTextWidth($price, $page), $y, self::$encoding);
 				$y -= $lineHeight;
@@ -537,7 +537,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 				$page->setFont($this->_font['normal'],$this->_font['size_m']);
 				$label = $this->_translator->translate('Total w/o Tax').':';
 				$page->drawText($label, $x, $y, self::$encoding);
-				$price = $values['total'] - $values['tax'];
+				$price = $values['total'] - $values['tax'] + $values['discountTax'];
 				$price = number_format($price,2,'.','').' '.$this->_shoppingConfig['currency'];
 				$page->drawText($price, $x1-self::getTextWidth($price, $page), $y, self::$encoding);
 				$y -= $lineHeight;
