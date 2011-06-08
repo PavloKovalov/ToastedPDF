@@ -57,7 +57,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 				'delimiter' => ',',
 				'content'	=> I2PDFPLUGINPATH.'/system/languages',
 				'scan'		=> Zend_Translate::LOCALE_FILENAME,
-				'locale'	=> 'fr'//$this->_settings ? $this->_settings->locale : 'en'
+				'locale'	=> $this->_settings ? $this->_settings->locale : 'en'
 			));
 			Zend_Registry::set('Zend_Translate', $this->_translator);
 		} catch (Exception $e) {
