@@ -23,8 +23,10 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 
 	private $_translator		= null;
 	private $_settings			= null;
+	
+	private $_session			= null;
 
-	public function __construct() {
+	public function __construct($options, $data) {
 		$this->_model = new ToastedpdfModel();
 		$this->_sitePath = unserialize(Zend_Registry::get('config'))->website->website->path;
 		$this->_shoppingConfig = $this->_model->selectShoppingConfig();
@@ -63,9 +65,17 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		} catch (Exception $e) {
 			error_log($e->getMessage());
 		}
+		$this->_session = new Zend_Session_Namespace($data['websiteUrl']);
 	}
 
 	public function run($requestParams = array()) {
+        $loggedUser = unserialize($this->_session->currentUser);
+		if ($loggedUser === false || 
+			!( $loggedUser instanceof RCMS_Object_User_User && in_array($loggedUser->getRoleId(), array('1', '3')) )
+			){	
+			die('Permission denied');
+		}
+		
 		if (empty ($requestParams)){
 			return false;
 		} else {
@@ -485,7 +495,17 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 			if (isset ($values['shipping'])){
 				$label = $this->_translator->translate('Shipping').':';
 				$page->drawText($label, $x, $y, self::$encoding);
-				$price = !empty ($values['shipping'])?number_format($values['shipping'],2,'.','').' '.$this->_shoppingConfig['currency']:'FREE';
+				if (!empty ($values['shipping']) ) {
+					$price = $values['shipping'];
+					if (isset($values['discountTaxRate'])) {
+						$shippingDeduct = $values['shipping'] * $values['discountTaxRate'] / 100;
+						$price -= $shippingDeduct;
+						$values['tax'] += $shippingDeduct;
+					}
+					$price = number_format($price,2,'.','').' '.$this->_shoppingConfig['currency'];
+				} else {
+					$price = $this->_translator->translate('FREE');
+				}
 				$page->drawText($price, $x1-self::getTextWidth($price, $page), $y, self::$encoding);
 				$y -= $lineHeight;
 			}
