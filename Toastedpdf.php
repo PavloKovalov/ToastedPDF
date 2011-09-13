@@ -13,6 +13,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
     const TEXT_ALIGN_RIGHT = 'right';
     const TEXT_ALIGN_CENTER = 'center';
 
+	private $_websiteUrl		= null;
 	private $_sitePath			= null;
 	private $_shoppingConfig	= null;
 	private $_font				= array();
@@ -29,6 +30,7 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 	public function __construct($options, $data) {
 		$this->_model = new ToastedpdfModel();
 		$this->_sitePath = unserialize(Zend_Registry::get('config'))->website->website->path;
+		$this->_websiteUrl = unserialize(Zend_Registry::get('config'))->website->website->url;
 		$this->_shoppingConfig = $this->_model->selectShoppingConfig();
 
 		//initial settings
@@ -65,13 +67,14 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 		} catch (Exception $e) {
 			error_log($e->getMessage());
 		}
-		$this->_session = new Zend_Session_Namespace($data['websiteUrl']);
+		$this->_session = new Zend_Session_Namespace($this->_websiteUrl);
 	}
 
 	public function run($requestParams = array()) {
         $loggedUser = unserialize($this->_session->currentUser);
 		if ($loggedUser === false || 
-			!( $loggedUser instanceof RCMS_Object_User_User && in_array($loggedUser->getRoleId(), array('1', '3')) )
+			!( $loggedUser instanceof RCMS_Object_User_User 
+				&& in_array($loggedUser->getRoleId(), array(RCMS_Object_User_User::USER_ROLE_ADMIN, RCMS_Object_User_User::USER_ROLE_SUPERADMIN)) )
 			){	
 			die('Permission denied');
 		}
@@ -497,8 +500,8 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 				$page->drawText($label, $x, $y, self::$encoding);
 				if (!empty ($values['shipping']) ) {
 					$price = $values['shipping'];
-					if (isset($values['discountTaxRate'])) {
-						$shippingDeduct = $values['shipping'] * $values['discountTaxRate'] / 100;
+					if (isset($values['shippingTaxRate'])) {
+						$shippingDeduct = $values['shipping'] * $values['shippingTaxRate'] / 100;
 						$price -= $shippingDeduct;
 						$values['tax'] += $shippingDeduct;
 					}
