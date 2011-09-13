@@ -501,9 +501,8 @@ class Toastedpdf implements RCMS_Core_PluginInterface {
 				if (!empty ($values['shipping']) ) {
 					$price = $values['shipping'];
 					if (isset($values['shippingTaxRate'])) {
-						$shippingDeduct = $values['shipping'] * $values['shippingTaxRate'] / 100;
-						$price -= $shippingDeduct;
-						$values['tax'] += $shippingDeduct;
+						$shippingTax = $values['shipping'] * $values['shippingTaxRate'] / 100;
+						$values['tax'] += $shippingTax;
 					}
 					$price = number_format($price,2,'.','').' '.$this->_shoppingConfig['currency'];
 				} else {
