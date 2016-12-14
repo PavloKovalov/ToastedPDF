@@ -1,4 +1,4 @@
-ToastedPDF is a plugin for [SEOTOASTER CMS](http://www.seotoaster.com/)
+ToastedPDF is a plugin for [SEOTOASTER CMS](http://www.seotoaster.com/) ![OUT OF DATE](https://img.shields.io/badge/state-OUT%20OF%20DATE-orange.svg)
 =========================================
 
 It generates pdf document for quote/invoice build in CMS.
